@@ -59,6 +59,15 @@ reservekit defaults to Mack's rule and offers `sigma_extrapolation =
 relative in both directions, which confirms the formulas and isolates the
 difference to this one documented modelling choice.
 
+## Note: chainladder calendar-test interval
+
+`chainladder` 0.10.1 centres the calendar-year test's interval (`range`) on
+Var[Z] rather than E[Z]: for RAA at the 95% level it reports
+[0.069, 7.888] = 3.979 +/- 1.96 x sqrt(3.979), whereas E[Z] = 12.875.
+reservekit centres on E[Z], as in Mack (1994). Only Z, E[Z] and Var[Z] are
+compared in the tests, and those agree to 1e-12. The stored `range` values
+are kept as reported by `chainladder` and are not used.
+
 ## Not yet validated
 
 * Against R `ChainLadder` directly: it could not be installed in the build
