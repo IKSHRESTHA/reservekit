@@ -19,7 +19,9 @@
 #'
 #' @param x A `triangle`.
 #' @param exposure Exposure per origin (e.g. earned premium), length 1 or one
-#'   per origin. Required unless `prior_ultimate` is given.
+#'   per origin. Required unless `prior_ultimate` is given. Per-origin
+#'   vectors are matched by position, or by name if named (names must then
+#'   be exactly the triangle's origin labels).
 #' @param elr Expected loss ratio(s) applied to `exposure`, length 1 or one per
 #'   origin.
 #' @param prior_ultimate A priori expected ultimate per origin, as an
@@ -46,15 +48,15 @@ fit_bf <- function(x, exposure = NULL, elr = NULL, prior_ultimate = NULL,
     if (!is.null(exposure) || !is.null(elr)) {
       abort("Supply either `prior_ultimate`, or `exposure` and `elr`, not both.")
     }
-    prior <- per_origin(prior_ultimate, n, "prior_ultimate")
+    prior <- per_origin(prior_ultimate, n, "prior_ultimate", rownames(cum))
     exposure_v <- rep(NA_real_, n)
     elr_v <- rep(NA_real_, n)
   } else {
     if (is.null(exposure) || is.null(elr)) {
       abort("`fit_bf()` needs `exposure` and `elr`, or `prior_ultimate`.")
     }
-    exposure_v <- per_origin(exposure, n, "exposure")
-    elr_v <- per_origin(elr, n, "elr")
+    exposure_v <- per_origin(exposure, n, "exposure", rownames(cum))
+    elr_v <- per_origin(elr, n, "elr", rownames(cum))
     if (any(exposure_v <= 0)) abort("`exposure` must be positive.")
     if (any(elr_v < 0)) abort("`elr` must be non-negative.")
     prior <- exposure_v * elr_v
@@ -115,8 +117,10 @@ bf_core <- function(cum, pattern, prior) {
 #'   Required.
 #' @param decay Weight decay in (0, 1]; 1 (default) is the classic method.
 #' @return A `reserve_fit` of subclass `reserve_cape_cod`; `results` gains
-#'   `exposure`, `elr` (per origin; all equal when `decay = 1`) and
-#'   `prior_ultimate`. The overall ELR is in `$elr`.
+#'   `exposure`, `used_exposure`, `elr` (the ELR applied to each origin;
+#'   all equal when `decay = 1`) and `prior_ultimate`. With `decay = 1` the
+#'   single ELR is also in `$elr`; with `decay < 1` `$elr` is `NULL` because
+#'   no single ELR is used.
 #' @references
 #' Stanard, J. N. (1985). A simulation test of prediction errors of loss
 #' reserve estimation techniques. *PCAS* 72, 124-148.
@@ -133,7 +137,7 @@ fit_cape_cod <- function(x, exposure, pattern = NULL, decay = 1, ...) {
   cum <- to_cumulative(x)
   n <- nrow(cum)
   if (missing(exposure)) abort("`fit_cape_cod()` needs `exposure`.")
-  exposure_v <- per_origin(exposure, n, "exposure")
+  exposure_v <- per_origin(exposure, n, "exposure", rownames(cum))
   if (any(exposure_v <= 0)) abort("`exposure` must be positive.")
   check_number(decay, "decay", lower = 0, upper = 1, lower_inclusive = FALSE)
   pattern <- resolve_pattern(cum, pattern, ..., .strict = TRUE)
@@ -153,7 +157,7 @@ fit_cape_cod <- function(x, exposure, pattern = NULL, decay = 1, ...) {
     method = "cape_cod", label = "Cape Cod", call = match.call(),
     triangle = cum, pattern = pattern, results = out$results,
     emergence = exposure_v * elr_v, warnings = out$warnings,
-    extra = list(elr = overall),
+    extra = list(elr = if (decay == 1) overall else NULL),
     assumptions = list(decay = decay, pattern = pattern$method %||% "supplied pattern",
                        tail = pattern$tail)
   )
@@ -183,8 +187,8 @@ fit_elr <- function(x, exposure, elr, pattern = NULL) {
   cum <- to_cumulative(x)
   n <- nrow(cum)
   if (missing(exposure) || missing(elr)) abort("`fit_elr()` needs `exposure` and `elr`.")
-  exposure_v <- per_origin(exposure, n, "exposure")
-  elr_v <- per_origin(elr, n, "elr")
+  exposure_v <- per_origin(exposure, n, "exposure", rownames(cum))
+  elr_v <- per_origin(elr, n, "elr", rownames(cum))
   if (any(exposure_v <= 0)) abort("`exposure` must be positive.")
   if (any(elr_v < 0)) abort("`elr` must be non-negative.")
   if (!is.null(pattern)) pattern <- resolve_pattern(cum, pattern)

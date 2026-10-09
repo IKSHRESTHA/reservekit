@@ -31,7 +31,8 @@ their mean squared error of prediction.
 
 For cumulative claims \eqn{C_{ij}} Mack assumes
 (1) \eqn{E[C_{i,j+1} | C_{i1},\dots,C_{ij}] = f_j C_{ij}},
-(2) \eqn{Var[C_{i,j+1} | C_{i1},\dots,C_{ij}] = \sigma_j^2 C_{ij}},
+(2) \eqn{Var[C_{i,j+1} | C_{i1},\dots,C_{ij}] = \sigma_j^2 C_{ij} / w_{ij}}
+(with weights \eqn{w_{ij} = 1} unless \code{weights} are supplied),
 (3) origin periods are independent.
 }
 
@@ -69,6 +70,8 @@ quantiles or prediction intervals are produced in this version.
 
 \section{Limitations}{
 
+Latest values must be non-negative. An origin with a zero latest value
+has zero ultimate and zero s.e. by construction (a warning is given).
 Tail factors are not supported in this version (Mack 1999 tail
 uncertainty is on the roadmap); use \code{\link[=fit_chain_ladder]{fit_chain_ladder()}} for tailed point
 estimates. Overridden (judgemental) factors are not supported because the

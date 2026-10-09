@@ -18,6 +18,7 @@ as_triangle(data, ...)
   aggregate = NULL,
   dev_step = NULL,
   origin_step = NULL,
+  check_latest = TRUE,
   ...
 )
 
@@ -57,6 +58,11 @@ become zero cells for incremental data, missing cells for cumulative).
 Inference cannot detect an empty period at the smallest gap (ages 12 and
 36 alone imply a step of 24), so state the step whenever it is known.}
 
+\item{check_latest}{Stop when the inferred latest diagonal is mostly
+empty or a whole diagonal has no rows (default \code{TRUE}). These patterns
+usually mean a stray row has moved the inferred valuation date; for
+incremental data they would otherwise be zero-filled silently.}
+
 \item{origin_labels, dev_ages}{For matrices: origin labels and numeric
 development ages. Default to the row and column names, or \code{1:n}.}
 }
@@ -92,10 +98,19 @@ future value. Fitting functions stop on genuine missing values.
 \item Development ages must be numeric, finite and lie on a regular grid
 (e.g. 12, 24, 36). Ages inside the grid with no data at all are an
 error unless \code{dev_step} is given, in which case they are added as columns.
-\item Numeric origins must lie on a regular grid; empty origin periods are an
-error unless \code{origin_step} is given, in which case they are added as rows.
-Character origins are sorted; factor origins use level order; \code{Date}
-origins are sorted and assumed consecutive.
+\item Numeric origins (and character origins that are all numbers, e.g.
+"2019") must lie on a regular grid; empty origin periods are an error
+unless \code{origin_step} is given, in which case they are added as rows.
+Factor origins use level order and every level must have data. \code{Date}
+origins are sorted and must be evenly spaced (within month-length
+variation). Other character origins are sorted alphabetically and cannot
+be checked for gaps: prefer numeric or factor origins.
+\item The latest valuation diagonal is the furthest calendar diagonal with any
+row. If it is mostly empty, or a whole diagonal is empty, the data almost
+certainly contain a stray row and construction stops (see
+\code{check_latest}). A warning is given if some latest-diagonal cells are
+empty, and if every cell beyond the main diagonal is exactly 0 (future
+cells exported as 0).
 \item Several rows for the same origin and age (claim-level data) are summed
 when \code{aggregate = "sum"}. The default (\code{NULL}) sums incremental data and
 refuses duplicated cumulative data, because summing per-claim cumulative

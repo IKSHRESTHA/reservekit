@@ -20,8 +20,10 @@ A list of class \code{reserve_test} with \code{statistic} (T),
 Tests the chain-ladder assumption that successive link ratios of an
 origin are uncorrelated (Mack 1994, Appendix G). For each pair of
 adjacent development steps with \eqn{n \ge 2} origins having both ratios,
-Spearman's rank correlation \eqn{T_j} is computed on those origins
-(ties get average ranks). The weighted mean
+\eqn{T_j = 1 - 6\sum_i (r_i - s_i)^2 / (n^3 - n)} is computed from the
+ranks of the two ratios among those origins, as in Mack (1994). Without
+ties this is Spearman's rank correlation; with ties (average ranks) it
+differs from it, and ties make the test less reliable. The weighted mean
 \eqn{T = \sum (n_j - 1) T_j / \sum (n_j - 1)} has mean 0 and variance
 \eqn{1 / \sum (n_j - 1)} under the null hypothesis, and is compared with a
 normal interval at level \code{ci}.

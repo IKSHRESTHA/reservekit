@@ -6,7 +6,8 @@
 #' @section Model:
 #' For cumulative claims \eqn{C_{ij}} Mack assumes
 #' (1) \eqn{E[C_{i,j+1} | C_{i1},\dots,C_{ij}] = f_j C_{ij}},
-#' (2) \eqn{Var[C_{i,j+1} | C_{i1},\dots,C_{ij}] = \sigma_j^2 C_{ij}},
+#' (2) \eqn{Var[C_{i,j+1} | C_{i1},\dots,C_{ij}] = \sigma_j^2 C_{ij} / w_{ij}}
+#' (with weights \eqn{w_{ij} = 1} unless `weights` are supplied),
 #' (3) origin periods are independent.
 #'
 #' @section Estimators:
@@ -38,6 +39,8 @@
 #' quantiles or prediction intervals are produced in this version.
 #'
 #' @section Limitations:
+#' Latest values must be non-negative. An origin with a zero latest value
+#' has zero ultimate and zero s.e. by construction (a warning is given).
 #' Tail factors are not supported in this version (Mack 1999 tail
 #' uncertainty is on the roadmap); use [fit_chain_ladder()] for tailed point
 #' estimates. Overridden (judgemental) factors are not supported because the
@@ -97,6 +100,11 @@ fit_mack <- function(x, n_periods = NULL, weights = NULL,
 
   lat <- latest_diagonal(cum)
   a <- lat$dev_index
+  neg <- lat$value < 0 & a < K
+  if (any(neg)) {
+    abort("Mack's model (Var = sigma^2 x C) needs non-negative latest cumulative values; ",
+          "origin(s) ", paste(lat$origin[neg], collapse = ", "), " are negative.")
+  }
   # Projected cumulative values C_hat[i, j] for j >= a_i.
   Chat <- C
   for (i in seq_len(n)) {
@@ -106,11 +114,14 @@ fit_mack <- function(x, n_periods = NULL, weights = NULL,
   }
   U <- Chat[, K]
   q <- sigma2 / f^2                                    # per step
+  # U_i / C_hat[i, j] is the product of factors from step j to K - 1; using it
+  # avoids 0/0 when the latest value is 0 (process variance is then 0).
+  to_last <- rev(cumprod(rev(f)))
   proc <- par <- numeric(n)
   for (i in seq_len(n)) {
     if (a[i] < K) {
       jj <- a[i]:(K - 1L)
-      proc[i] <- U[i]^2 * sum(q[jj] / Chat[i, jj])
+      proc[i] <- U[i] * sum(q[jj] * to_last[jj])
       par[i] <- U[i]^2 * sum(q[jj] / S[jj])
     }
   }
@@ -140,6 +151,14 @@ fit_mack <- function(x, n_periods = NULL, weights = NULL,
   if (any(extrap)) {
     warns <- paste0("sigma extrapolated (", sigma_extrapolation, ") for step(s) ",
                     paste(names(pattern$factors)[extrap], collapse = ", "), ".")
+  }
+  zero <- lat$value == 0 & a < K
+  if (any(zero)) {
+    w0 <- paste0("Origin(s) ", paste(lat$origin[zero], collapse = ", "), " have a zero ",
+                 "latest value: chain-ladder ultimate and Mack s.e. are 0 by construction. ",
+                 "Consider fit_bf() or fit_cape_cod() for these origins.")
+    warn(w0)
+    warns <- c(warns, w0)
   }
   new_reserve_fit(
     method = "mack", label = "Mack chain ladder", call = match.call(),

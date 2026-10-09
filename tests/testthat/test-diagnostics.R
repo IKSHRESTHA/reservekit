@@ -36,16 +36,25 @@ test_that("calendar-year test matches Python and its moments", {
   expect_false(ct$reject)
 })
 
-test_that("calendar test moments match exact enumeration for n = 5", {
-  n <- 5
-  z <- vapply(0:n, function(l) min(l, n - l), numeric(1))
-  p <- dbinom(0:n, n, 0.5)
-  e <- sum(z * p)
-  v <- sum(z^2 * p) - e^2
-  m <- floor((n - 1) / 2)
-  e2 <- n / 2 - choose(n - 1, m) * n / 2^n
-  v2 <- n * (n - 1) / 4 - choose(n - 1, m) * n * (n - 1) / 2^n + e2 - e2^2
-  expect_equal(c(e2, v2), c(e, v))
+test_that("calendar test moments match exact binomial enumeration", {
+  for (n in 1:12) {
+    z <- vapply(0:n, function(l) min(l, n - l), numeric(1))
+    p <- dbinom(0:n, n, 0.5)
+    e <- sum(z * p)
+    v <- sum(z^2 * p) - e^2
+    expect_equal(calendar_moments(n), c(e, v), tolerance = 1e-12)
+  }
+  expect_equal(calendar_moments(0L), c(0, 0))
+})
+
+test_that("correlation statistic with ties follows Mack's formula, not Spearman", {
+  m <- rbind(c(100, 150, 165, 170), c(100, 150, 165.0001, NA), c(100, 140, NA, NA),
+             c(100, NA, NA, NA))
+  t <- dev_correlation_test(as_triangle(m, type = "cumulative"))
+  lr <- link_ratios(as_triangle(m, type = "cumulative"))
+  r <- rank(lr[1:2, 1])
+  s <- rank(lr[1:2, 2])
+  expect_equal(t$by_step$T[1], 1 - 6 * sum((r - s)^2) / (2^3 - 2))
 })
 
 test_that("diagnostics() collects tests, validation and Mack residuals", {
@@ -89,4 +98,10 @@ test_that("calendar test handles diagonals where every ratio equals the median",
   ct <- calendar_test(as_triangle(m, type = "cumulative"))
   expect_equal(ct$statistic, 0)
   expect_equal(ct$variance, 0)
+})
+
+test_that("zero_column message describes a zero sum, not all zeros (review finding 5)", {
+  m <- matrix(c(5, 10, 20, -5, 8, NA, 50, NA, NA), 3, byrow = TRUE)
+  v <- validate_triangle(as_triangle(m, type = "cumulative"))
+  expect_match(v$message[v$check == "zero_column"], "sum to 0")
 })

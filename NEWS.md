@@ -16,3 +16,9 @@ First release candidate.
 * Shared result object with `print()`, `summary()`, `predict()`, `coef()`,
   `as.data.frame()`, `plot()`; `compare_methods()`.
 * Datasets: `raa`, `taylor_ashe`, `claims_synthetic`, `premium_synthetic`.
+* Hardening after independent review: stray rows that would move the inferred
+  valuation diagonal now stop triangle construction; numeric-like character
+  origins sort numerically; unused factor levels and gaps in Date origins are
+  refused; all-zero future cells trigger a warning; Mack handles zero latest
+  values (s.e. 0, warning) and refuses negative ones; Cape Cod with decay no
+  longer reports a single ELR; named exposures are matched by origin.

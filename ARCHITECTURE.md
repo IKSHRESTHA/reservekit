@@ -49,17 +49,16 @@ R/
   convert.R         cumulative <-> incremental, diagonals, latest
   validate.R        validate_triangle(): data-quality report (warnings vs errors)
   dev-factors.R     link ratios, factor selection (volume/simple, n_periods,
-                    weights, exclusions), calendar decay weights
-  tail.R            tail factor: fixed or exponential (log-linear) decay
-  pattern.R         development pattern object (CDF, % developed) shared by
+                    weights, overrides), calendar decay weights, tail factor
+                    (fixed or exponential), dev_pattern object shared by
                     CL, BF, Cape Cod and ELR
-  fit-chain-ladder.R
+  fit-chain-ladder.R chain ladder; shared result-object constructor
   fit-expected.R    Bornhuetter-Ferguson, Cape Cod, expected loss ratio
   fit-mack.R        Mack (1993) standard errors
   diagnostics.R     Mack (1994) correlation and calendar-year tests, residuals
-  methods.R         print/summary/predict/plot/as.data.frame/coef for fits
-  compare.R         compare_methods()
+  methods.R         print/summary/predict/as.data.frame/coef, compare_methods()
   plot.R            base-graphics plots
+  data.R            dataset documentation
   utils.R           internal checks and error helpers
 ```
 
@@ -72,7 +71,8 @@ ages) with attributes:
   inferred.
 * `measure`: `"paid"`, `"incurred"`, `"reported_count"`, `"closed_count"`,
   or `"other"`. Affects labels only (e.g. reserve vs IBNR).
-* `origin`, `dev`: origin labels and numeric development ages.
+* origin labels are the row names; `dev_ages` holds the numeric development
+  ages (column names are their formatted values).
 * `observed`: logical matrix. A cell is in the observed region if its
   calendar index `i + j - 1` is at or before the latest valuation
   diagonal. NA inside the observed region is a **genuine missing value**; NA
@@ -81,7 +81,15 @@ ages) with attributes:
   triangle from transaction data with no rows for that cell (documented rule).
 
 Assumption (v0.1): origin and development periods have the same length (e.g.
-annual x annual). Mixed granularity is on the roadmap.
+annual x annual). Mixed granularity is on the roadmap and is not detected
+automatically in every case.
+
+The latest valuation diagonal is *inferred* as the furthest calendar diagonal
+with any data. Because one stray row would move it, construction stops when
+the inferred latest diagonal is mostly empty or a whole diagonal is empty
+(`check_latest`), and warns when some latest cells are empty or when every
+cell beyond the main diagonal is exactly 0. An explicit `valuation` argument
+is on the roadmap.
 
 S3 was chosen over S4/R6: the object is a value (copy semantics are right),
 matrices give fast vectorised arithmetic, and S3 generics are what most R users

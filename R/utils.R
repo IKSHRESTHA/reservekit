@@ -34,16 +34,23 @@ check_number <- function(x, arg, lower = -Inf, upper = Inf,
 }
 
 # Recycle a scalar or check a per-origin vector.
-per_origin <- function(x, n, arg) {
+per_origin <- function(x, n, arg, origins = NULL) {
   if (!is.numeric(x) || anyNA(x) || any(!is.finite(x))) {
     abort("`", arg, "` must be numeric with no missing or infinite values.")
   }
-  if (length(x) == 1L) return(rep(x, n))
+  if (length(x) == 1L) return(rep(unname(x), n))
+  if (!is.null(names(x)) && !is.null(origins)) {
+    if (!setequal(names(x), origins) || anyDuplicated(names(x))) {
+      abort("`", arg, "` is named, but its names do not match the triangle's origins (",
+            paste(utils::head(origins, 4), collapse = ", "), if (n > 4) ", ...", ").")
+    }
+    x <- x[origins]
+  }
   if (length(x) != n) {
     abort("`", arg, "` must have length 1 or one value per origin period (",
           n, "); got length ", length(x), ".")
   }
-  as.numeric(x)
+  unname(as.numeric(x))
 }
 
 fmt_cells <- function(rows, cols, max = 5L) {

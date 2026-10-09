@@ -79,7 +79,8 @@ validate_triangle <- function(x, outlier_mad = 3) {
       rows <- which(has_pair[, j])
       if (length(rows) && sum(den[rows, j], na.rm = TRUE) == 0) {
         add("error", "zero_column", rows[1], j,
-            sprintf("All cumulative values at age %s are 0; the %s-%s factor cannot be estimated.",
+            sprintf(paste("Cumulative values at age %s sum to 0;",
+                          "the %s-%s factor cannot be volume-weighted."),
                     format_ages(ages[j]), format_ages(ages[j]), format_ages(ages[j + 1L])))
       }
       ok <- rows[!is.na(den[rows, j]) & !is.na(num[rows, j]) &

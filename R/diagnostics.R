@@ -3,8 +3,10 @@
 #' Tests the chain-ladder assumption that successive link ratios of an
 #' origin are uncorrelated (Mack 1994, Appendix G). For each pair of
 #' adjacent development steps with \eqn{n \ge 2} origins having both ratios,
-#' Spearman's rank correlation \eqn{T_j} is computed on those origins
-#' (ties get average ranks). The weighted mean
+#' \eqn{T_j = 1 - 6\sum_i (r_i - s_i)^2 / (n^3 - n)} is computed from the
+#' ranks of the two ratios among those origins, as in Mack (1994). Without
+#' ties this is Spearman's rank correlation; with ties (average ranks) it
+#' differs from it, and ties make the test less reliable. The weighted mean
 #' \eqn{T = \sum (n_j - 1) T_j / \sum (n_j - 1)} has mean 0 and variance
 #' \eqn{1 / \sum (n_j - 1)} under the null hypothesis, and is compared with a
 #' normal interval at level `ci`.
@@ -93,16 +95,9 @@ calendar_test <- function(x, ci = 0.95) {
     L <- sum(cls[cells] == "L", na.rm = TRUE)
     S <- sum(cls[cells] == "S", na.rm = TRUE)
     n <- L + S
-    if (n == 0L) {
-      e <- 0
-      v <- 0
-    } else {
-      m <- floor((n - 1) / 2)
-      e <- n / 2 - choose(n - 1, m) * n / 2^n
-      v <- n * (n - 1) / 4 - choose(n - 1, m) * n * (n - 1) / 2^n + e - e^2
-    }
+    mom <- calendar_moments(n)
     rows[[length(rows) + 1L]] <- data.frame(diagonal = d, L = L, S = S, Z = min(L, S),
-                                            expected = e, variance = v)
+                                            expected = mom[[1]], variance = mom[[2]])
   }
   if (!length(rows)) abort("Not enough link ratios for the calendar-year test.")
   by <- do.call(rbind, rows)
@@ -115,6 +110,15 @@ calendar_test <- function(x, ci = 0.95) {
                  expected = e, variance = v, interval = int, ci = ci,
                  reject = stat < int[1] || stat > int[2], by_diagonal = by),
             class = "reserve_test")
+}
+
+# Mean and variance of Z = min(L, S) when L ~ Binomial(n, 1/2) (Mack 1994).
+calendar_moments <- function(n) {
+  if (n == 0L) return(c(0, 0))
+  m <- floor((n - 1) / 2)
+  e <- n / 2 - choose(n - 1, m) * n / 2^n
+  v <- n * (n - 1) / 4 - choose(n - 1, m) * n * (n - 1) / 2^n + e - e^2
+  c(e, v)
 }
 
 #' @export

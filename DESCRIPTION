@@ -9,8 +9,9 @@ Description: Tools for general insurance (property and casualty) loss
     validation, chain ladder, Bornhuetter-Ferguson, Cape Cod and expected
     loss ratio methods, tail factors, Mack (1993) <doi:10.2143/AST.23.2.2005092>
     prediction errors and Mack's diagnostic tests. All methods share one
-    result object and every calculation is documented and validated against
-    published results.
+    result object; formulas are documented and results are tested against
+    published examples, exact reference calculations and an independent
+    implementation.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

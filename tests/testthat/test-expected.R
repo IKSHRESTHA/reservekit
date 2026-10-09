@@ -91,3 +91,22 @@ test_that("ELR method: ultimate = exposure x ELR, negative reserves flagged", {
   expect_equal(rowSums(inc), fit3$results$reserve, ignore_attr = TRUE)
   expect_error(fit_elr(raa, exposure = prem), "needs `exposure` and `elr`")
 })
+
+test_that("Cape Cod with decay does not report a single ELR (review finding 3)", {
+  prem <- seq(30000, 48000, length.out = 10)
+  cc <- fit_cape_cod(raa, exposure = prem, decay = 0.5)
+  expect_null(cc$elr)
+  expect_gt(diff(range(cc$results$elr)), 0.1)
+  expect_output(print(summary(cc)), "Cape Cod ELR \\(decay\\)")
+  expect_output(print(summary(fit_cape_cod(raa, exposure = prem))), "Cape Cod ELR ")
+})
+
+test_that("named exposures are matched to origins, not positions", {
+  prem <- stats::setNames(seq(30000, 48000, length.out = 10), origins(raa))
+  a <- fit_bf(raa, exposure = prem, elr = 0.6)
+  b <- fit_bf(raa, exposure = rev(prem), elr = 0.6)
+  expect_equal(a$results$ultimate, b$results$ultimate)
+  bad <- stats::setNames(prem, 1:10)
+  expect_error(fit_bf(raa, exposure = bad, elr = 0.6), "names do not match")
+  expect_error(fit_cape_cod(raa, exposure = bad), "names do not match")
+})

@@ -22,8 +22,10 @@ is estimated from \code{x} with \code{...}.}
 }
 \value{
 A \code{reserve_fit} of subclass \code{reserve_cape_cod}; \code{results} gains
-\code{exposure}, \code{elr} (per origin; all equal when \code{decay = 1}) and
-\code{prior_ultimate}. The overall ELR is in \verb{$elr}.
+\code{exposure}, \code{used_exposure}, \code{elr} (the ELR applied to each origin;
+all equal when \code{decay = 1}) and \code{prior_ultimate}. With \code{decay = 1} the
+single ELR is also in \verb{$elr}; with \code{decay < 1} \verb{$elr} is \code{NULL} because
+no single ELR is used.
 }
 \description{
 Estimates a single expected loss ratio from the triangle itself,

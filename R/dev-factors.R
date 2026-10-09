@@ -80,8 +80,9 @@ calendar_weights <- function(x, decay) {
 #' @section Tail:
 #' `tail` is either a fixed factor (default `1`, no development beyond the
 #' last age) or `"exponential"`. The exponential method fits
-#' \eqn{\log(f_j - 1) = a + b j} by least squares to the estimated factors
-#' greater than 1 (factors \eqn{\le 1} are excluded and reported), requires
+#' \eqn{\log(f_j - 1) = a + b j} by least squares to the selected factors
+#' (after any `override`) greater than 1 (factors \eqn{\le 1} are excluded
+#' and reported in `tail_info`), requires
 #' at least 3 points and \eqn{b < 0}, and multiplies the extrapolated factors
 #' \eqn{1 + e^{a + b j}} for \eqn{j} beyond the last step until
 #' \eqn{f_j - 1 < 10^{-8}} or `tail_max_steps` steps. Extrapolation is

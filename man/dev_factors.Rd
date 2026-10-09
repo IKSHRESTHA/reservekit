@@ -64,8 +64,9 @@ whose weighted denominator is 0, is an error unless an \code{override} is given.
 
 \code{tail} is either a fixed factor (default \code{1}, no development beyond the
 last age) or \code{"exponential"}. The exponential method fits
-\eqn{\log(f_j - 1) = a + b j} by least squares to the estimated factors
-greater than 1 (factors \eqn{\le 1} are excluded and reported), requires
+\eqn{\log(f_j - 1) = a + b j} by least squares to the selected factors
+(after any \code{override}) greater than 1 (factors \eqn{\le 1} are excluded
+and reported in \code{tail_info}), requires
 at least 3 points and \eqn{b < 0}, and multiplies the extrapolated factors
 \eqn{1 + e^{a + b j}} for \eqn{j} beyond the last step until
 \eqn{f_j - 1 < 10^{-8}} or \code{tail_max_steps} steps. Extrapolation is

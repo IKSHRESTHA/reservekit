@@ -105,6 +105,10 @@ print.summary.reserve_fit <- function(x, ...) {
     cat(sprintf("%-22s %14.1f%%\n", "CV of reserve", 100 * t$cv))
   }
   if (!is.null(x$elr)) cat(sprintf("%-22s %15.4f\n", "Cape Cod ELR", x$elr))
+  if (is.null(x$elr) && !is.null(x$results$used_exposure)) {
+    cat(sprintf("%-22s %7.4f - %.4f\n", "Cape Cod ELR (decay)", min(x$results$elr),
+                max(x$results$elr)))
+  }
   cat("\nReserve is ", tolower(measure_labels(x$measure)), ".\n", sep = "")
   if (!is.null(x$factors)) {
     cat("\nSelected age-to-age factors (last = tail):\n")

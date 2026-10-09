@@ -30,9 +30,11 @@ each discrepancy found was traced to its cause.
 | BF ultimates | RAA, Taylor-Ashe | Y | 1e-12 | pass |
 | Cape Cod ELR and ultimates, decay 1 and 0.75 | RAA, Taylor-Ashe | Y | 1e-12 | pass |
 | Exponential tail factor | RAA, Taylor-Ashe | Y | 1e-7 | pass |
+| Mack s.e. with `n_periods` 3 and 5, both sigma rules | RAA, Taylor-Ashe | Y | 1e-9 | pass |
 | Correlation test T = 0.070, Var = 1/28 | RAA | P, Y | 1e-12 vs Y | pass |
-| Calendar test Z, E[Z], Var[Z] | RAA, Taylor-Ashe | Y; Var/E also vs exact binomial enumeration | 1e-12 | pass |
-| Spearman T_j equals `stats::cor(method = "spearman")` | RAA | I | 1.5e-8 (testthat default) | pass |
+| Calendar test Z, E[Z], Var[Z] | RAA, Taylor-Ashe | Y | 1e-12 | pass |
+| Calendar moments E[Z_j], Var[Z_j] (package function) vs exact binomial enumeration, n = 1..12 | - | I | 1e-12 | pass |
+| T_j equals `stats::cor(method = "spearman")` when there are no ties (RAA); follows Mack's formula with ties | RAA, small | I | 1.5e-8 | pass |
 | Cumulative <-> incremental round trip | RAA | I | 1.5e-8 | pass |
 | Sum of projected increments = reserve | CL (with/without tail), BF, ELR | I | 1.5e-8 | pass |
 | BF with prior = CL ultimate reproduces CL | RAA | I | 1.5e-8 (testthat default) | pass |
@@ -62,8 +64,29 @@ difference to this one documented modelling choice.
 * Against R `ChainLadder` directly: it could not be installed in the build
   environment (no CRAN/GitHub access). Its documented RAA/GenIns outputs
   coincide with the published Mack figures above.
-* Mack with non-default weights or `n_periods`: tested for internal
-  consistency only.
+* Mack with non-unit `weights`: internal consistency only (the reviewer
+  confirmed the weighted formulas analytically). `n_periods` is now
+  cross-checked against Python `chainladder`.
 * Behaviour on very large or pathological real triangles beyond the cases in
   the test suite.
-* No independent actuarial review has been performed yet.
+* No review by a qualified reserving actuary yet (see below for the
+  automated review).
+
+## Independent review (automated reviewer, 2026-10-08)
+
+A separate reviewing agent, which had not written the code, tried to break
+the package with adversarial inputs. Confirmed findings and their resolution:
+
+| # | Severity | Finding | Resolution |
+|---|---|---|---|
+| 1 | critical | One stray incremental row (or an origin gap/ordering problem) moved the inferred valuation diagonal; a whole diagonal was zero-filled and reserves fell from 16.4m to 5.6m with no warning. Character origins "1".."10" sorted as text; unused factor levels and gaps in Date origins went undetected. | `as_triangle()` now stops when the latest diagonal is mostly empty or any diagonal is empty (`check_latest`), warns on partially empty latest diagonals and on all-zero future cells, sorts numeric-like strings numerically with gap checks, refuses unused factor levels and unevenly spaced Date origins. Regression tests added. |
+| 2 | major | `fit_mack()` returned NaN total s.e. for a zero latest value and an understated total for a negative one. | Process variance computed without 0/0; zero latest gives s.e. 0 with a warning; negative latest is refused. Tests added. |
+| 3 | major | Cape Cod with `decay < 1` printed a single "Cape Cod ELR" that was not used. | `$elr` is `NULL` when `decay < 1`; summary shows the range of per-origin ELRs. |
+| 4 | minor | Correlation test documented as Spearman with ties; Mack's formula differs from Spearman with ties. | Documentation corrected; test of Mack's formula with ties added. |
+| 5 | minor | `zero_column` message said "all 0" when values summed to 0. | Message corrected. |
+| 6 | minor | Exponential tail documented as fitted to estimated factors but used overridden ones. | Documentation now states it fits the selected (post-override) factors. |
+
+Concerns also addressed: named exposure vectors are now matched to origins
+by name; overstated claims in `DESCRIPTION` and `ARCHITECTURE.md` corrected;
+the weighted Mack variance assumption is now documented; the calendar-test
+moment test now exercises package code.

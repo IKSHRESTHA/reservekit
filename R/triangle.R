@@ -20,10 +20,19 @@
 #' * Development ages must be numeric, finite and lie on a regular grid
 #'   (e.g. 12, 24, 36). Ages inside the grid with no data at all are an
 #'   error unless `dev_step` is given, in which case they are added as columns.
-#' * Numeric origins must lie on a regular grid; empty origin periods are an
-#'   error unless `origin_step` is given, in which case they are added as rows.
-#'   Character origins are sorted; factor origins use level order; `Date`
-#'   origins are sorted and assumed consecutive.
+#' * Numeric origins (and character origins that are all numbers, e.g.
+#'   "2019") must lie on a regular grid; empty origin periods are an error
+#'   unless `origin_step` is given, in which case they are added as rows.
+#'   Factor origins use level order and every level must have data. `Date`
+#'   origins are sorted and must be evenly spaced (within month-length
+#'   variation). Other character origins are sorted alphabetically and cannot
+#'   be checked for gaps: prefer numeric or factor origins.
+#' * The latest valuation diagonal is the furthest calendar diagonal with any
+#'   row. If it is mostly empty, or a whole diagonal is empty, the data almost
+#'   certainly contain a stray row and construction stops (see
+#'   `check_latest`). A warning is given if some latest-diagonal cells are
+#'   empty, and if every cell beyond the main diagonal is exactly 0 (future
+#'   cells exported as 0).
 #' * Several rows for the same origin and age (claim-level data) are summed
 #'   when `aggregate = "sum"`. The default (`NULL`) sums incremental data and
 #'   refuses duplicated cumulative data, because summing per-claim cumulative
@@ -51,6 +60,10 @@
 #'   become zero cells for incremental data, missing cells for cumulative).
 #'   Inference cannot detect an empty period at the smallest gap (ages 12 and
 #'   36 alone imply a step of 24), so state the step whenever it is known.
+#' @param check_latest Stop when the inferred latest diagonal is mostly
+#'   empty or a whole diagonal has no rows (default `TRUE`). These patterns
+#'   usually mean a stray row has moved the inferred valuation date; for
+#'   incremental data they would otherwise be zero-filled silently.
 #' @param origin_labels,dev_ages For matrices: origin labels and numeric
 #'   development ages. Default to the row and column names, or `1:n`.
 #' @param ... Unused; for future methods.
@@ -81,7 +94,8 @@ as_triangle <- function(data, ...) {
 as_triangle.data.frame <- function(data, origin, development, value,
                                    type = c("cumulative", "incremental"),
                                    measure = "other", aggregate = NULL,
-                                   dev_step = NULL, origin_step = NULL, ...) {
+                                   dev_step = NULL, origin_step = NULL,
+                                   check_latest = TRUE, ...) {
   if (missing(type)) {
     abort("`type` must be supplied: \"cumulative\" or \"incremental\". ",
           "reservekit never guesses whether values are cumulative.")
@@ -142,14 +156,52 @@ as_triangle.data.frame <- function(data, origin, development, value,
   cal <- row(mat) + col(mat) - 1L
   valuation <- max(cal[present])
   observed <- cal <= valuation
+  check_diagonal_coverage(present, observed, cal, valuation, strict = check_latest)
   filled <- matrix(FALSE, n, m)
   if (type == "incremental") {
     filled <- observed & !present
     mat[filled] <- 0
   }
   dimnames(mat) <- list(orig$labels, format_ages(dev_ages))
+  check_future_zeros(mat, observed)
   new_triangle(mat, type = type, measure = measure, dev_ages = dev_ages,
                observed = observed, filled = filled)
+}
+
+# The valuation diagonal is inferred from the furthest cell with data, so a
+# single stray row (wrong age or origin) would add a diagonal of empty cells.
+check_diagonal_coverage <- function(present, observed, cal, valuation, strict = TRUE) {
+  share <- tapply(present[observed], cal[observed], mean)
+  empty <- as.integer(names(share)[share == 0])
+  latest_share <- share[[as.character(valuation)]]
+  latest_n <- sum(observed & cal == valuation)
+  if (strict && (length(empty) || (latest_n >= 4L && latest_share < 0.5))) {
+    abort("The latest valuation diagonal is inferred from the furthest cell with data, ",
+          "but only ", round(100 * latest_share), "% of its cells have any rows",
+          if (length(empty)) paste0(" and ", length(empty), " whole diagonal(s) have none"),
+          ". This usually means a stray row (wrong development age or origin), ",
+          "mixed period lengths, or origins on the wrong grid. Check the data; if the ",
+          "sparsity is genuine, use `check_latest = FALSE`.")
+  }
+  if (latest_share < 1) {
+    warn(sum(observed & cal == valuation & !present), " of ", latest_n,
+         " cell(s) on the latest diagonal have no rows. Check that the data are complete ",
+         "to the valuation date.")
+  }
+  invisible(TRUE)
+}
+
+# Spreadsheet exports often store future cells as 0 instead of blank.
+check_future_zeros <- function(mat, observed) {
+  n <- nrow(mat)
+  beyond <- observed & (row(mat) + col(mat) - 1L) > n
+  vals <- mat[beyond]
+  if (length(vals) >= 3L && all(!is.na(vals) & vals == 0)) {
+    warn("Every cell beyond the main diagonal is exactly 0. If these are future ",
+         "periods stored as 0 rather than missing, replace them with NA: as given ",
+         "they are treated as observed and reserves will be understated.")
+  }
+  invisible(TRUE)
 }
 
 #' @rdname as_triangle
@@ -194,6 +246,7 @@ as_triangle.matrix <- function(data, type = c("cumulative", "incremental"),
   valuation <- max(cal[!is.na(mat)])
   observed <- cal <= valuation
   dimnames(mat) <- list(as.character(origin_labels), format_ages(dev_ages))
+  check_future_zeros(mat, observed)
   new_triangle(mat, type = type, measure = measure, dev_ages = dev_ages,
                observed = observed, filled = matrix(FALSE, n, m))
 }
@@ -253,15 +306,33 @@ regular_grid <- function(x, arg, step = NULL) {
 }
 
 origin_levels <- function(o, arg, step = NULL) {
-  if (is.factor(o)) {
-    lv <- levels(droplevels(o))
-    return(list(labels = lv, index = match(as.character(o), lv)))
+  if (is.character(o)) {
+    num <- suppressWarnings(as.numeric(o))
+    if (!anyNA(num)) o <- num  # numeric-like labels: order and gap-check numerically
   }
   if (!is.null(step) && !is.numeric(o)) {
     abort("`origin_step` can only be used with numeric origins.")
   }
+  if (is.factor(o)) {
+    lv <- levels(o)
+    unused <- setdiff(lv, as.character(o))
+    if (length(unused)) {
+      abort("Origin factor level(s) ", paste(utils::head(unused, 5), collapse = ", "),
+            " have no data. Drop them with droplevels() if they are not origin periods; ",
+            "otherwise supply data (e.g. zero rows) for them.")
+    }
+    return(list(labels = lv, index = match(as.character(o), lv)))
+  }
   if (inherits(o, "Date")) {
     u <- sort(unique(o))
+    if (length(u) > 2L) {
+      gaps <- as.numeric(diff(u))
+      if (max(gaps) / min(gaps) > 1.11) {
+        abort("Date origins are not evenly spaced (gaps from ", min(gaps), " to ", max(gaps),
+              " days): an origin period is probably missing. Use numeric origins with ",
+              "`origin_step` to state empty periods explicitly.")
+      }
+    }
     return(list(labels = as.character(u), index = match(o, u)))
   }
   if (is.numeric(o)) {

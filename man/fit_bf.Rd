@@ -17,7 +17,9 @@ fit_bf(
 \item{x}{A \code{triangle}.}
 
 \item{exposure}{Exposure per origin (e.g. earned premium), length 1 or one
-per origin. Required unless \code{prior_ultimate} is given.}
+per origin. Required unless \code{prior_ultimate} is given. Per-origin
+vectors are matched by position, or by name if named (names must then
+be exactly the triangle's origin labels).}
 
 \item{elr}{Expected loss ratio(s) applied to \code{exposure}, length 1 or one per
 origin.}

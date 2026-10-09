@@ -19,7 +19,8 @@ Status key: [x] done and validated, [~] partial, [ ] not started.
 * [x] `compare_methods()`
 * [x] print/summary/predict/plot/as.data.frame/coef
 * [~] CI workflows written but not yet run on GitHub
-* [ ] Independent actuarial review (must be someone other than the author)
+* [~] Independent review: one automated reviewer pass done (findings fixed,
+      see VALIDATION.md); review by a qualified reserving actuary outstanding
 
 ## v0.2.0: uncertainty
 
@@ -28,7 +29,10 @@ Status key: [x] done and validated, [~] partial, [ ] not started.
 * [ ] Prediction intervals from lognormal/normal approximations, clearly
       labelled as approximations
 * [ ] Claims development result (one-year) uncertainty (Merz-Wuthrich)
-* [ ] Exclusion rules for genuine missing values
+* [ ] Exclusion rules for genuine missing values (incl. left-truncated
+      triangles whose older origins lack early development ages)
+* [ ] Explicit `valuation` argument to `as_triangle()` instead of inferring
+      the latest diagonal
 * [ ] Inverse-power and other tail curves; tail sensitivity tables
 
 ## v0.3.0: simulation

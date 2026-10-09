@@ -107,3 +107,31 @@ test_that("Mack needs no extrapolation when every step has two ratios", {
   expect_false(any(attr(fit$sigma, "extrapolated")))
   expect_length(fit$warnings, 0)
 })
+
+test_that("Mack with n_periods matches Python chainladder (both sigma rules)", {
+  r <- readRDS(testthat::test_path("fixtures", "python_mack_nperiods.rds"))
+  for (nm in c("raa", "genins")) {
+    tri <- if (nm == "raa") raa else taylor_ashe
+    for (n in c(3, 5)) {
+      for (rule in c("mack", "loglinear")) {
+        key <- paste0(nm, "_n", n, "_", if (rule == "mack") "mack" else "log-linear")
+        fit <- fit_mack(tri, n_periods = n, sigma_extrapolation = rule)
+        expect_equal(fit$results$se, r[[key]]$se, tolerance = 1e-9)
+        expect_equal(fit$total$se, r[[key]]$total_se, tolerance = 1e-9)
+      }
+    }
+  }
+})
+
+test_that("zero latest gives zero s.e. with a warning; negative latest is refused", {
+  m <- matrix(c(100, 150, 175, 180, 110, 160, 180, NA, 120, 170, NA, NA, 0, NA, NA, NA),
+              4, byrow = TRUE)
+  expect_warning(fit <- fit_mack(as_triangle(m, type = "cumulative")), "zero latest")
+  expect_equal(fit$results$se[4], 0)
+  expect_true(is.finite(fit$total$se))
+  # Total equals the fit without the zero origin's contribution.
+  ok <- fit_mack(as_triangle(m[1:3, ], type = "cumulative"))
+  expect_equal(fit$total$se, ok$total$se)
+  m[4, 1] <- -50
+  expect_error(fit_mack(as_triangle(m, type = "cumulative")), "non-negative latest")
+})

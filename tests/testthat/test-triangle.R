@@ -59,7 +59,8 @@ test_that("incremental transactions are summed and empty cells recorded as fille
                   amt = c(10, 5, 2, 7, 3))
   # Ages 1 and 3 only: the inferred step is 2, so age 2 is only known to
   # exist when dev_step is given (documented limitation of inference).
-  tri <- as_triangle(d, "ay", "age", "amt", type = "incremental", dev_step = 1)
+  expect_warning(tri <- as_triangle(d, "ay", "age", "amt", type = "incremental", dev_step = 1),
+                 "1 of 3 cell\\(s\\) on the latest diagonal")
   m <- as.matrix(tri)
   expect_equal(m[1, ], c(15, 0, 2), ignore_attr = TRUE)
   expect_true(attr(tri, "filled")[1, 2])
@@ -92,18 +93,28 @@ test_that("irregular development ages and origin gaps are handled explicitly", {
   # An empty age inside the grid is an error unless the step is explicit.
   d2 <- data.frame(ay = c(1, 1, 1, 2), age = c(12, 24, 48, 12), v = c(1, 2, 3, 4))
   expect_error(as_triangle(d2, "ay", "age", "v", type = "incremental"), "36 with no data")
-  tri <- as_triangle(d2, "ay", "age", "v", type = "incremental", dev_step = 12)
+  # With the step given, the empty 36 column leaves a whole diagonal empty:
+  # refused by default, accepted when the sparsity is declared genuine.
+  expect_error(as_triangle(d2, "ay", "age", "v", type = "incremental", dev_step = 12),
+               "check_latest")
+  expect_warning(tri <- as_triangle(d2, "ay", "age", "v", type = "incremental",
+                                    dev_step = 12, check_latest = FALSE), "no rows")
   expect_identical(dev_ages(tri), c(12, 24, 36, 48))
   # Same rule for numeric origins.
   d3 <- data.frame(ay = c(2017, 2017, 2018, 2018, 2020), age = c(1, 2, 1, 2, 1),
                    v = c(1, 2, 3, 4, 5))
   expect_error(as_triangle(d3, "ay", "age", "v", type = "incremental"), "origin_step")
-  tri3 <- as_triangle(d3, "ay", "age", "v", type = "incremental", origin_step = 1)
+  expect_warning(tri3 <- as_triangle(d3, "ay", "age", "v", type = "incremental",
+                                     origin_step = 1), "latest diagonal")
   expect_identical(origins(tri3), c("2017", "2018", "2019", "2020"))
   expect_true(attr(tri3, "filled")[3, 1])
-  tri3c <- as_triangle(d3, "ay", "age", "v", type = "cumulative", origin_step = 1)
+  expect_warning(tri3c <- as_triangle(d3, "ay", "age", "v", type = "cumulative",
+                                      origin_step = 1), "latest diagonal")
   expect_true(is.na(as.matrix(tri3c)[3, 1]))
+  # Numeric-like character origins are treated as numbers (gap-checked).
   expect_error(as_triangle(transform(d3, ay = as.character(ay)), "ay", "age", "v",
+                           type = "incremental"), "origin_step")
+  expect_error(as_triangle(transform(d3, ay = paste0("AY", ay)), "ay", "age", "v",
                            type = "incremental", origin_step = 1), "numeric origins")
 })
 
@@ -218,4 +229,38 @@ test_that("measure labels cover every measure", {
     tri <- as_triangle(as.matrix(raa), type = "cumulative", measure = m)
     expect_output(print(fit_chain_ladder(tri)), "Total")
   }
+})
+
+test_that("stray rows that move the inferred valuation are refused (review finding 1)", {
+  d2 <- rbind(claims_synthetic,
+              data.frame(claim_id = 99999, accident_year = 2024, dev_age = 2, paid = 10,
+                         incurred = 0))
+  expect_error(as_triangle(d2, "accident_year", "dev_age", "paid", type = "incremental",
+                           dev_step = 1), "stray row")
+})
+
+test_that("origin ordering and gaps are checked for every origin type", {
+  # Numeric-like strings sort numerically, not alphabetically.
+  d <- data.frame(o = as.character(1:10), age = 1, v = 1)
+  expect_identical(origins(as_triangle(d, "o", "age", "v", type = "incremental")),
+                   as.character(1:10))
+  # Unused factor levels are refused rather than silently dropped.
+  f <- data.frame(o = factor(c("a", "c"), levels = c("a", "b", "c")), age = 1, v = 1)
+  expect_error(as_triangle(f, "o", "age", "v", type = "incremental"), "have no data")
+  # A gap in Date origins is refused.
+  dd <- data.frame(o = as.Date(c("2019-01-01", "2020-01-01", "2022-01-01")), age = 1, v = 1)
+  expect_error(as_triangle(dd, "o", "age", "v", type = "incremental"), "not evenly spaced")
+  # Month-length variation is fine.
+  dm <- data.frame(o = as.Date(c("2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01")),
+                   age = 1, v = 1)
+  expect_identical(nrow(as_triangle(dm, "o", "age", "v", type = "incremental")), 4L)
+})
+
+test_that("future cells exported as 0 trigger a warning", {
+  m <- as.matrix(to_incremental(raa))
+  m[is.na(m)] <- 0
+  expect_warning(as_triangle(m, type = "incremental"), "replace them with NA")
+  d <- as.data.frame(suppressWarnings(as_triangle(m, type = "incremental")))
+  expect_warning(as_triangle(d, "origin", "dev_age", "value", type = "incremental"),
+                 "replace them with NA")
 })
