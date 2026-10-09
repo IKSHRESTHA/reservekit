@@ -35,10 +35,12 @@ validate_triangle <- function(x, outlier_mad = 3) {
   measure <- attr(x, "measure")
   cum <- as.matrix(to_cumulative(x))
   inc <- as.matrix(to_incremental(x))
-  issues <- list()
+  # Findings accumulate in an environment so add() can append without `<<-`.
+  found <- new.env(parent = emptyenv())
+  found$issues <- list()
   add <- function(sev, check, r, cidx, msg) {
     if (length(r) == 0L) return()
-    issues[[length(issues) + 1L]] <<- data.frame(
+    found$issues[[length(found$issues) + 1L]] <- data.frame(
       severity = sev, check = check, origin = org[r], dev_age = ages[cidx],
       message = msg, stringsAsFactors = FALSE
     )
@@ -112,7 +114,7 @@ validate_triangle <- function(x, outlier_mad = 3) {
         "Only one development age; no development information.")
   }
 
-  out <- if (length(issues)) do.call(rbind, issues) else
+  out <- if (length(found$issues)) do.call(rbind, found$issues) else
     data.frame(severity = character(), check = character(), origin = character(),
                dev_age = numeric(), message = character(), stringsAsFactors = FALSE)
   out$severity <- factor(out$severity, levels = c("error", "warning", "note"))
