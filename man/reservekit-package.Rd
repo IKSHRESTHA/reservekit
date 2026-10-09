@@ -26,7 +26,7 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Kks \email{ikshrestha220@gmail.com}
+\strong{Maintainer}: Krishna Kumar Shrestha\email{ikshrestha220@gmail.com}
 
 }
 \keyword{internal}

@@ -2,7 +2,7 @@ Package: reservekit
 Title: Transparent and Validated General Insurance Loss Reserving
 Version: 0.1.0
 Authors@R:
-    person("Kks", "", email = "ikshrestha220@gmail.com", role = c("aut", "cre"))
+    person("Krishna Kumar", "Shrestha", email = "ikshrestha220@gmail.com", role = c("aut", "cre"))
 Description: Tools for general insurance (property and casualty) loss
     reserving: development triangles that distinguish cumulative from
     incremental data and structural from genuine missing values, data
