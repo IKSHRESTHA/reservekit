@@ -31,6 +31,11 @@ test_that("simple average excludes zero-denominator ratios with a warning", {
   expect_equal(dev_factors(tri)$factors[[1]], (150 + 165 + 186) / (0 + 110 + 120))
 })
 
+test_that("print names the averaging method", {
+  expect_output(print(dev_factors(raa, method = "simple")), "simple average")
+  expect_output(print(dev_factors(raa)), "volume-weighted")
+})
+
 test_that("factors match the Python chainladder implementation", {
   r <- pyref()
   for (nm in c("raa", "genins")) {

@@ -34,9 +34,14 @@ The reference calculations in `inst/validation/` use Python 3:
 
 * `hand_calc.py` uses only the standard library. Regenerate its output with
   `python3 inst/validation/hand_calc.py > inst/validation/hand_calc_output.json`.
-* The `python_chainladder_*.json` files were produced with the Python
-  `chainladder` package, version 0.10.1. Use the same version, or record the
-  new version in `VALIDATION.md` if you change it.
+* `chainladder_reference.py` writes the `python_chainladder_*.json` files
+  using the Python `chainladder` package, version 0.10.1. Run it from
+  `inst/validation/`. Use the same version, or record the new version in
+  `VALIDATION.md` if you change it.
+
+The tests read `.rds` copies of these JSON files from
+`tests/testthat/fixtures/`. After regenerating any JSON, run
+`Rscript data-raw/make_fixtures.R` (needs `jsonlite`).
 
 ## Workflow
 

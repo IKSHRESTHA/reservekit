@@ -29,5 +29,5 @@ Suggests:
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 LazyData: true
-URL: https://github.com/OWNER/reservekit
-BugReports: https://github.com/OWNER/reservekit/issues
+URL: https://github.com/ikshrestha/reservekit
+BugReports: https://github.com/ikshrestha/reservekit/issues

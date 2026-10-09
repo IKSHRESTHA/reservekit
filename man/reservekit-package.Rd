@@ -20,13 +20,18 @@ accounting or solvency regime.
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/OWNER/reservekit}
-  \item Report bugs at \url{https://github.com/OWNER/reservekit/issues}
+  \item \url{https://github.com/ikshrestha/reservekit}
+  \item Report bugs at \url{https://github.com/ikshrestha/reservekit/issues}
 }
 
 }
 \author{
-\strong{Maintainer}: Krishna Kumar Shrestha\email{ikshrestha220@gmail.com}
+\strong{Maintainer}: Krishna Kumar Shrestha \email{ikshrestha220@gmail.com}
+
+Authors:
+\itemize{
+  \item Krishna Kumar Shrestha \email{ikshrestha220@gmail.com}
+}
 
 }
 \keyword{internal}

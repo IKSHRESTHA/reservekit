@@ -53,6 +53,15 @@ test_that("compare_methods lines up methods and totals", {
   expect_identical(names(ult), c("origin", "a", "b"))
   expect_error(compare_methods(1), "reserve_fit")
   expect_error(compare_methods(), "at least one")
+  spaced <- compare_methods(list("Chain ladder" = fit_chain_ladder(raa),
+                                 "BF 60%" = fit_bf(raa, exposure = prem, elr = 0.6)))
+  expect_named(spaced, c("origin", "latest", "Chain ladder", "BF 60%"))
+  expect_equal(spaced[["Chain ladder"]][11], sum(spaced[["Chain ladder"]][1:10]))
+})
+
+test_that("summary names overridden steps", {
+  s <- summary(fit_chain_ladder(raa, override = c("1-2" = 2.9)))
+  expect_output(print(s), "overrides: 1-2 = 2.9")
 })
 
 test_that("plots run without error", {

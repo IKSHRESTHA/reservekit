@@ -122,6 +122,8 @@ print.summary.reserve_fit <- function(x, ...) {
       "NULL"
     } else if (is.list(v)) {
       paste0(v$method %||% "", " ", signif(v$factor %||% NA, 6))
+    } else if (!is.null(names(v))) {
+      paste0(names(v), " = ", format(v), collapse = ", ")
     } else {
       paste(format(v), collapse = ", ")
     }
@@ -278,9 +280,12 @@ compare_methods <- function(..., value = c("reserve", "ultimate")) {
   out <- data.frame(origin = org, stringsAsFactors = FALSE)
   if (same_latest) out$latest <- lat
   for (i in seq_along(fits)) out[[nms[i]]] <- fits[[i]]$results[[value]]
-  tot <- as.data.frame(lapply(out[-1], sum))
-  tot <- cbind(origin = "Total", tot, stringsAsFactors = FALSE)
+  # Built from `out` so fit names that are not syntactic ("Chain ladder") survive.
+  tot <- out[1L, , drop = FALSE]
+  tot$origin <- "Total"
+  tot[-1] <- lapply(out[-1], sum)
   out <- rbind(out, tot)
+  rownames(out) <- NULL
   attr(out, "value") <- value
   out
 }

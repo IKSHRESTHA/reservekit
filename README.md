@@ -19,7 +19,7 @@ beyond base R.
 # From a source checkout:
 install.packages("path/to/reservekit", repos = NULL, type = "source")
 # or, once published on GitHub:
-# remotes::install_github("OWNER/reservekit")
+# remotes::install_github("ikshrestha/reservekit")
 ```
 
 ## Example

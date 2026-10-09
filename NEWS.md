@@ -22,3 +22,9 @@ First release candidate.
   refused; all-zero future cells trigger a warning; Mack handles zero latest
   values (s.e. 0, warning) and refuses negative ones; Cape Cod with decay no
   longer reports a single ELR; named exposures are matched by origin.
+* `compare_methods()` accepts fit names that are not syntactic R names
+  (e.g. `"Chain ladder"`); simple-average patterns print as "simple average"
+  rather than "simple-weighted"; `summary()` names overridden steps.
+* Validation is reproducible end to end: `inst/validation/chainladder_reference.py`
+  regenerates the Python `chainladder` reference values and
+  `data-raw/make_fixtures.R` converts the JSON references into test fixtures.

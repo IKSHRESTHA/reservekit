@@ -292,7 +292,8 @@ print.dev_pattern <- function(x, digits = 4, ...) {
   meth <- ""
   if (!is.null(x$method)) {
     span <- if (is.null(x$n_periods)) "" else paste0(", latest ", x$n_periods, " diagonals")
-    meth <- paste0(" (", x$method, "-weighted", span, ")")
+    label <- if (x$method == "simple") "simple average" else "volume-weighted"
+    meth <- paste0(" (", label, span, ")")
   }
   cat("<dev_pattern>", meth, "\n", sep = "")
   tab <- data.frame(
