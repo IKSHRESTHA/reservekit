@@ -1,0 +1,149 @@
+---
+title: "Getting started with reservekit"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with reservekit}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5)
+```
+
+This vignette walks through a complete reserving analysis: building
+triangles from claim transactions, checking the data, estimating development
+factors, running chain ladder, Bornhuetter-Ferguson, Cape Cod and Mack, and
+comparing the results.
+
+The data are **synthetic** (`claims_synthetic`, `premium_synthetic`) and do
+not represent any insurer's experience.
+
+```{r}
+library(reservekit)
+```
+
+## Terminology
+
+| Term | Meaning in reservekit |
+|---|---|
+| Origin period | Accident (or underwriting/report) period: the rows of a triangle. |
+| Development age | Time since the start of the origin period: the columns. |
+| Valuation date | The date of the latest diagonal. |
+| Latest | The value on the latest diagonal for each origin. |
+| Ultimate | Estimated final value of the origin's claims. |
+| Reserve | Ultimate minus latest. On **paid** data this is total unpaid (case reserves + IBNR); on **incurred** data it is IBNR (including IBNER). |
+
+## 1. Build triangles from claim transactions
+
+`as_triangle()` needs to be told whether values are cumulative or
+incremental; it never guesses.
+
+```{r}
+head(claims_synthetic)
+
+paid <- as_triangle(claims_synthetic, origin = "accident_year",
+                    development = "dev_age", value = "paid",
+                    type = "incremental", measure = "paid", dev_step = 1)
+incurred <- as_triangle(claims_synthetic, origin = "accident_year",
+                        development = "dev_age", value = "incurred",
+                        type = "incremental", measure = "incurred", dev_step = 1)
+to_cumulative(paid)
+```
+
+Rules worth knowing:
+
+* Several rows for one origin/age cell are **summed** for incremental data.
+  For cumulative data duplicates are refused unless `aggregate = "sum"`.
+* An incremental cell inside the observed region with no transactions is set
+  to 0 and recorded (`attr(x, "filled")`). A missing cumulative cell is a
+  **genuine missing value**, which fitting functions refuse.
+* Cells beyond the latest diagonal are **structural** future values and are
+  never confused with missing data.
+
+## 2. Check the data
+
+```{r}
+validate_triangle(paid)
+validate_triangle(raa)
+```
+
+Findings are graded `error` (fitting will stop), `warning` (needs review) and
+`note` (legitimate features such as negative incurred development from case
+reserve releases).
+
+## 3. Development factors and tail
+
+```{r}
+dev_factors(paid)
+dev_factors(paid, method = "simple", n_periods = 5)
+dev_factors(paid, tail = "exponential")
+```
+
+Judgemental selections are explicit overrides and are recorded:
+
+```{r}
+dev_factors(paid, override = c("9-10" = 1.005), tail = 1.01)
+```
+
+## 4. Chain ladder
+
+```{r}
+cl <- fit_chain_ladder(paid, tail = "exponential")
+cl
+predict(cl, type = "incremental")
+```
+
+The projected increments of every origin add up exactly to its reserve.
+
+## 5. Bornhuetter-Ferguson and Cape Cod
+
+```{r}
+prem <- premium_synthetic$earned_premium
+bf <- fit_bf(paid, exposure = prem, elr = 0.65, tail = "exponential")
+cc <- fit_cape_cod(paid, exposure = prem, tail = "exponential")
+cc$elr
+```
+
+## 6. Mack chain ladder and reserve uncertainty
+
+```{r}
+mack <- fit_mack(paid)
+summary(mack)
+```
+
+`se` is the square root of Mack's estimated **mean squared error of
+prediction** (process + parameter error). It is not a confidence interval for
+the mean, and no distribution is assumed: this version produces no
+quantiles or prediction intervals. Mack fits do not take a tail factor in
+this version.
+
+```{r}
+plot(mack)
+```
+
+## 7. Diagnostics
+
+```{r}
+d <- diagnostics(mack)
+d$correlation
+d$calendar
+plot(mack, which = "residuals")
+```
+
+## 8. Compare methods
+
+```{r}
+compare_methods(chain_ladder = cl, bf = bf, cape_cod = cc)
+```
+
+`compare_methods()` does not pick a winner. Method selection remains an
+actuarial judgement informed by the diagnostics, the data and knowledge of the
+business.
+
+## Paid versus incurred
+
+```{r}
+compare_methods(paid = fit_chain_ladder(paid), incurred = fit_chain_ladder(incurred),
+                value = "ultimate")
+```

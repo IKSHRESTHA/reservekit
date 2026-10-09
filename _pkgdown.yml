@@ -1,0 +1,16 @@
+url: ~
+template:
+  bootstrap: 5
+reference:
+  - title: Triangles
+    contents: [as_triangle, triangle_type, is_triangle, to_cumulative, latest_diagonal, link_ratios, as.data.frame.triangle, plot.triangle]
+  - title: Data quality
+    contents: [validate_triangle]
+  - title: Development patterns
+    contents: [dev_factors, dev_pattern, calendar_weights]
+  - title: Reserving methods
+    contents: [fit_chain_ladder, fit_bf, fit_cape_cod, fit_elr, fit_mack]
+  - title: Results and diagnostics
+    contents: [reserve_fit, summary.reserve_fit, predict.reserve_fit, plot.reserve_fit, compare_methods, diagnostics, dev_correlation_test, calendar_test]
+  - title: Data
+    contents: [raa, taylor_ashe, claims_synthetic, premium_synthetic]
